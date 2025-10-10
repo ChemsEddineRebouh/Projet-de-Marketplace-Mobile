@@ -7,20 +7,30 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const mapAuthError = (err) => {
+    switch (err?.code) {
+      case "auth/invalid-credential": return "Email ou mot de passe invalide.";
+      case "auth/too-many-requests": return "Trop de tentatives. Réessaie plus tard.";
+      case "auth/network-request-failed": return "Connexion réseau instable. Veuillez réessayer.";
+      default: return "Erreur de connexion.";
+    }
+  };
 
   const handleLogin = async () => {
     setError("");
     try {
       await signInWithEmailAndPassword(auth, email.trim(), password);
-      navigation.navigate("Home");
+      navigation.reset({
+        index: 0,
+        routes: [{ name: "Home" }],
+      });
     } catch (err) {
-      // Message plus clair côté UI
-      setError(err?.message ?? "Erreur de connexion");
+      setError(mapAuthError(err));
       console.log("Login error:", err);
     }
   };
   const handleCreateAccountButton = async () => {
-      navigation.navigate("CreateAccount");
+    navigation.navigate("Signup");
   };
   return (
     <View style={styles.container}>
