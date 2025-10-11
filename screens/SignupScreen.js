@@ -29,7 +29,6 @@ export default function SignupScreen({ navigation }) {
         createdAt: serverTimestamp(),
       });
 
-      // 4) reset vers Home
       navigation.reset({ index: 0, routes: [{ name: "Home" }] });
     } catch (e) {
       console.log("Signup error", e);

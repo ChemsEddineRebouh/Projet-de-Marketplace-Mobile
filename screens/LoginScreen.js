@@ -53,8 +53,8 @@ export default function LoginScreen({ navigation }) {
         value={password}
         onChangeText={setPassword}
       />
-      <Button title="Create an account" onPress={handleCreateAccountButton} />
       <Button title="Sign in" onPress={handleLogin} />
+      <Button title="Create an account" onPress={handleCreateAccountButton} />
     </View>
   );
 }
