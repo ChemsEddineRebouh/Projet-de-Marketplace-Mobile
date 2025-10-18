@@ -8,7 +8,7 @@ import PostComponent from "./components/PostComponent";
 
 export default function HomeScreen({ navigation }) {
   const [profile, setProfile] = useState(null);
-  const [posts, setPosts] = useState([]);                
+  const [posts, setPosts] = useState([]);
   const [usernamesById, setUsernamesById] = useState({});
 
   useEffect(() => {
@@ -67,10 +67,11 @@ export default function HomeScreen({ navigation }) {
   const renderItem = ({ item }) => (
     <PostComponent
       title={item.title}
-      description={item.description}
       city={item.city}
       price={item.price}
-      ownerName={usernamesById[item.creator_id]}
+      creator_id={item.creator_id}
+      usernamesById={item.usernamesById}
+      onPress={() => navigation.navigate("PostScreen", { postId: item.id })}
     />
   );
 
@@ -79,6 +80,7 @@ export default function HomeScreen({ navigation }) {
       <Text style={styles.text}>
         Bienvenue{profile?.username ? `, ${profile.username}` : ""}
       </Text>
+      <Button title="Messages" onPress={() => navigation.navigate("Messages")} />
 
       <FlatList
         style={{ width: "100%", paddingHorizontal: 16 }}
