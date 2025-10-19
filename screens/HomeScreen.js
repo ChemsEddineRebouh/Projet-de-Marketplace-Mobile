@@ -1,12 +1,12 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { View, Text, Button, StyleSheet, FlatList } from "react-native";
+import { View, Text, FlatList, Pressable, useWindowDimensions, } from "react-native";
 import { auth, db } from "../firebase";
-import {
-  collection, query, orderBy, onSnapshot, getDocs, where, documentId, doc, getDoc
-} from "firebase/firestore";
+import { collection, query, orderBy, onSnapshot, getDocs, where, documentId, doc, getDoc, } from "firebase/firestore";
 import PostComponent from "./components/PostComponent";
 
 export default function HomeScreen({ navigation }) {
+  const { height: screenH } = useWindowDimensions();
+  const LIST_MAX = Math.round(screenH * 0.55);
   const [profile, setProfile] = useState(null);
   const [posts, setPosts] = useState([]);
   const [usernamesById, setUsernamesById] = useState({});
@@ -24,7 +24,7 @@ export default function HomeScreen({ navigation }) {
   useEffect(() => {
     const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
       setPosts(list);
     });
     return () => unsub();
@@ -32,11 +32,14 @@ export default function HomeScreen({ navigation }) {
 
   useEffect(() => {
     const loadCreators = async () => {
-      const needed = new Set(posts.map(p => p.creator_id).filter(Boolean));
-      const toFetch = [...needed].filter(uid => !(uid in usernamesById));
+      const needed = new Set(posts.map((p) => p.creator_id).filter(Boolean));
+      const toFetch = [...needed].filter((uid) => !(uid in usernamesById));
       if (toFetch.length === 0) return;
 
-      const chunk = (arr, n) => arr.reduce((acc, _, i) => (i % n ? acc : [...acc, arr.slice(i, i + n)]), []);
+      const chunk = (arr, n) =>
+        arr.reduce(
+          (acc, _, i) => (i % n ? acc : [...acc, arr.slice(i, i + n)]),
+);
       const chunks = chunk(toFetch, 10);
 
       const newMap = {};
@@ -44,12 +47,12 @@ export default function HomeScreen({ navigation }) {
         const qs = await getDocs(
           query(collection(db, "users"), where(documentId(), "in", ids))
         );
-        qs.forEach(docSnap => {
+        qs.forEach((docSnap) => {
           const data = docSnap.data();
           newMap[docSnap.id] = data?.username || "(sans nom)";
         });
       }
-      setUsernamesById(prev => ({ ...prev, ...newMap }));
+      setUsernamesById((prev) => ({ ...prev, ...newMap }));
     };
 
     if (posts.length) loadCreators();
@@ -76,29 +79,53 @@ export default function HomeScreen({ navigation }) {
   );
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.text}>
+    <View className="flex-1 pt-10 items-center bg-white dark:bg-neutral-900">
+      <Text className="text-lg mb-5 text-neutral-900 dark:text-white">
         Bienvenue{profile?.username ? `, ${profile.username}` : ""}
       </Text>
-      <Button title="Messages" onPress={() => navigation.navigate("Messages")} />
 
-      <FlatList
-        style={{ width: "100%", paddingHorizontal: 16 }}
-        data={posts}
-        keyExtractor={(item) => item.id}
-        renderItem={renderItem}
-        ListEmptyComponent={<Text>Aucun post pour l’instant.</Text>}
-      />
+      <Pressable
+        className="mb-3 px-4 py-2 rounded-xl bg-blue-600 active:bg-blue-700"
+        onPress={() => navigation.navigate("Messages")}
+      >
+        <Text className="text-white font-semibold">Messages</Text>
+      </Pressable>
 
-      <View style={{ height: 12 }} />
-      <Button title="Créer une publication" onPress={handleCreatePost} />
-      <View style={{ height: 8 }} />
-      <Button title="Se déconnecter" onPress={handleLogout} />
+      <View className="w-full px-4" style={{ maxHeight: LIST_MAX }}>
+        <FlatList
+          data={posts}
+          keyExtractor={(item) => item.id}
+          renderItem={renderItem}
+          ItemSeparatorComponent={() => <View className="h-3" />}
+          ListEmptyComponent={
+            <View className="items-center mt-10">
+              <Text className="text-neutral-500 dark:text-neutral-400">
+                Aucun post pour l’instant.
+              </Text>
+            </View>
+          }
+          contentContainerStyle={{ paddingBottom: 12 }}
+          showsVerticalScrollIndicator={false}
+        />
+      </View>
+
+      <View className="h-3" />
+      <Pressable
+        onPress={handleCreatePost}
+        className="px-4 py-3 rounded-xl bg-blue-600 active:bg-blue-700"
+      >
+        <Text className="text-white font-semibold">Créer une publication</Text>
+      </Pressable>
+
+      <View className="h-2" />
+      <Pressable
+        onPress={handleLogout}
+        className="px-4 py-3 rounded-xl border border-neutral-300 dark:border-neutral-600"
+      >
+        <Text className="text-neutral-800 dark:text-neutral-100 font-semibold">
+          Se déconnecter
+        </Text>
+      </Pressable>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: { flex: 1, paddingTop: 40, alignItems: "center" },
-  text: { fontSize: 18, marginBottom: 20 },
-});

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, StyleSheet, TextInput, Button } from "react-native";
+import { View, Text, TextInput, Pressable, ScrollView } from "react-native";
 import { auth, db } from "../firebase";
 import {
   doc,
@@ -10,7 +10,6 @@ import {
   updateDoc,
   setDoc,
 } from "firebase/firestore";
-import { getOrCreateChat } from "../lib/chat";
 
 const makeChatId = (postId, uidA, uidB) => {
   const [a, b] = [uidA, uidB].sort();
@@ -21,7 +20,9 @@ export default function PostScreen({ route }) {
   const { postId } = route.params;
   const [post, setPost] = useState(null);
   const [seller, setSeller] = useState(null);
-  const [message, setMessage] = useState("Bonjour, est-ce toujours disponible ?");
+  const [message, setMessage] = useState(
+    "Bonjour, est-ce toujours disponible ?"
+  );
   const [alreadyMessaged, setAlreadyMessaged] = useState(false);
   const [infoMessage, setInfoMessage] = useState("");
 
@@ -94,42 +95,84 @@ export default function PostScreen({ route }) {
     }
   };
 
-  if (!post) return <Text>Chargement...</Text>;
+  if (!post) return <Text className="px-4 py-6">Chargement...</Text>;
   const isSeller = auth.currentUser && post.creator_id === auth.currentUser.uid;
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>{post.title}</Text>
-      <Text>{post.description}</Text>
-      <Text>Ville: {post.city}</Text>
-      <Text>Prix: {post.price}</Text>
-      <Text>Vendeur: {seller ? seller.username : "Chargement..."}</Text>
+    <ScrollView
+      className="flex-1 bg-slate-50 dark:bg-neutral-900"
+      contentContainerStyle={{ padding: 16, paddingBottom: 24 }}
+      bounces
+    >
+      <View className="bg-white dark:bg-neutral-800 rounded-3xl p-5 border border-neutral-100 dark:border-neutral-700 shadow-lg shadow-black/5">
+        <Text className="text-2xl font-extrabold text-neutral-900 dark:text-white">
+          {post.title}
+        </Text>
+
+        {!!post.description && (
+          <Text className="mt-2 text-neutral-700 dark:text-neutral-300">
+            {post.description}
+          </Text>
+        )}
+
+        <View className="mt-4 flex-row flex-wrap items-center gap-2">
+          <Text className="px-2 py-0.5 rounded-full text-xs bg-neutral-100 text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
+            {post.city}
+          </Text>
+          <Text className="px-2 py-0.5 rounded-full text-xs font-semibold bg-blue-50 text-blue-700 dark:bg-blue-400/10 dark:text-blue-300">
+            {post.price}$
+          </Text>
+          <Text className="text-xs text-neutral-500 dark:text-neutral-400">
+            Vendeur :{" "}
+            <Text className="font-medium">
+              {seller ? seller.username : "Chargement..."}
+            </Text>
+          </Text>
+        </View>
+      </View>
 
       {!isSeller && (
-        <View style={{ marginTop: 20 }}>
+        <View className="mt-5 bg-white dark:bg-neutral-800 rounded-3xl p-5 border border-neutral-100 dark:border-neutral-700 shadow-sm">
           {alreadyMessaged ? (
-            <Text style={styles.info}>En attente de la réponse du vendeur.</Text>
+            <Text className="text-green-700 dark:text-green-400 italic">
+              En attente de la réponse du vendeur.
+            </Text>
           ) : (
             <>
-              <Text>Envoyer un message au vendeur :</Text>
+              <Text className="text-neutral-700 dark:text-neutral-300 mb-2">
+                Envoyer un message au vendeur :
+              </Text>
+
               <TextInput
-                style={styles.input}
+                className="h-12 px-4 rounded-xl bg-neutral-50 dark:bg-neutral-700/60 border border-neutral-200 dark:border-neutral-600 text-neutral-900 dark:text-white"
                 value={message}
                 onChangeText={setMessage}
                 editable={!alreadyMessaged}
+                placeholder="Bonjour, est-ce toujours disponible ?"
+                placeholderTextColor="#9ca3af"
               />
-              <Button title="Envoyer" onPress={handleSendMessage} disabled={alreadyMessaged} />
+
+              <Pressable
+                onPress={handleSendMessage}
+                disabled={alreadyMessaged}
+                className={`mt-3 h-12 rounded-xl items-center justify-center ${
+                  alreadyMessaged
+                    ? "bg-blue-600/60"
+                    : "bg-blue-600 active:bg-blue-700"
+                }`}
+              >
+                <Text className="text-white font-semibold">Envoyer</Text>
+              </Pressable>
             </>
+          )}
+
+          {!!infoMessage && (
+            <Text className="mt-3 text-xs text-neutral-500 dark:text-neutral-400">
+              {infoMessage}
+            </Text>
           )}
         </View>
       )}
-    </View>
+    </ScrollView>
   );
 }
-
-const styles = StyleSheet.create({
-  input: { borderWidth: 1, padding: 10, marginVertical: 10, borderRadius: 8 },
-  container: { flex: 1, padding: 16 },
-  title: { fontSize: 22, fontWeight: "bold", marginBottom: 12 },
-  info: { marginTop: 10, fontStyle: "italic", color: "#2e7d32" },
-});
