@@ -1,143 +1,154 @@
 import React, { useState } from "react";
-import { View, TextInput, Text, Pressable, Platform } from "react-native";
-import { auth, db } from "../firebase";
+import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, Alert, Image } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
+import { auth, db } from "../firebase";
 
 export default function CreatePostScreen({ navigation }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [city, setCity] = useState("");
   const [price, setPrice] = useState("");
-  const [error, setError] = useState("");
+  const [category, setCategory] = useState("");
+  const [location, setLocation] = useState("");
 
-  const priceNumber = parseFloat(String(price).replace(",", "."));
-  const isValid =
-    title.trim().length > 0 &&
-    description.trim().length > 0 &&
-    city.trim().length > 0 &&
-    !Number.isNaN(priceNumber);
-
-  const handleSavePost = async () => {
-    setError("");
-    if (!isValid) {
-      setError("Tous les champs sont requis et le prix doit être valide.");
+  const handlePublish = async () => {
+    if (!title || !price || !location) {
+      Alert.alert("Erreur", "Veuillez remplir les champs obligatoires (Titre, Prix, Localisation).");
       return;
     }
+
     try {
-      const docRef = await addDoc(collection(db, "posts"), {
-        creator_id: auth.currentUser?.uid || null,
-        title: title.trim(),
-        description: description.trim(),
-        city: city.trim(),
-        price: priceNumber,
+      await addDoc(collection(db, "posts"), {
+        title,
+        description,
+        price,
+        category: category || "Général",
+        city: location,
+        creator_id: auth.currentUser?.uid,
         createdAt: serverTimestamp(),
       });
-      console.log("New post ID:", docRef.id);
-      navigation.reset({ index: 0, routes: [{ name: "Home" }] });
-    } catch (e) {
-      console.log("Create post error", e);
-      setError("Erreur lors de la création de la publication.");
+      navigation.goBack();
+    } catch (error) {
+      Alert.alert("Erreur", error.message);
     }
-  };
-
-  const onChangePrice = (t) => {
-    let s = t.replace(/[^\d.,]/g, "");
-    const sepIdxs = [s.indexOf(","), s.indexOf(".")].filter((i) => i !== -1);
-    const firstSepIdx = sepIdxs.length ? Math.min(...sepIdxs) : -1;
-    if (firstSepIdx !== -1) {
-      const sep = s[firstSepIdx];
-      const head = s.slice(0, firstSepIdx).replace(/[.,]/g, "");
-      let tail = s.slice(firstSepIdx + 1).replace(/[.,]/g, "");
-      tail = tail.slice(0, 2);
-      s = head + sep + tail;
-    } else {
-      s = s.replace(/[.,]/g, "");
-    }
-    setPrice(s);
   };
 
   return (
-    <View className="flex-1 bg-slate-50 dark:bg-neutral-900 px-6 py-8">
-      <Text className="text-2xl font-extrabold text-center mb-6 text-neutral-900 dark:text-white">
-        Création de votre publication
-      </Text>
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"} 
+      className="flex-1 bg-neutral-50 dark:bg-neutral-900"
+    >
+      <View className="absolute top-0 w-full z-50 bg-white/90 dark:bg-neutral-900/90 pt-12 pb-4 px-6 flex-row justify-between items-center border-b border-neutral-200 dark:border-neutral-800">
+        <Pressable onPress={() => navigation.goBack()} className="p-2 -ml-2">
+          <Ionicons name="close" size={28} color="#171717" className="dark:text-white" />
+        </Pressable>
+        <Text className="text-xl font-black tracking-tighter text-neutral-900 dark:text-white">ClicVente</Text>
+        <View className="w-10 h-10 rounded-full overflow-hidden bg-neutral-200 dark:bg-neutral-800 items-center justify-center">
+          <Ionicons name="person" size={20} color="#737373" />
+        </View>
+      </View>
 
-      {!!error && (
-        <Text className="text-red-600 text-sm mb-3 text-center">{error}</Text>
-      )}
-
-      <View className="bg-white dark:bg-neutral-800 rounded-3xl p-5 border border-neutral-100 dark:border-neutral-700">
-        <Text className="text-neutral-700 dark:text-neutral-300 text-sm mb-1">
-          Titre
-        </Text>
-        <TextInput
-          className="h-12 px-4 rounded-xl bg-neutral-50 dark:bg-neutral-700/60 border border-neutral-200 dark:border-neutral-600 text-neutral-900 dark:text-white mb-4"
-          placeholder="Titre"
-          placeholderTextColor="#9ca3af"
-          value={title}
-          onChangeText={setTitle}
-          returnKeyType="next"
-        />
-
-        <Text className="text-neutral-700 dark:text-neutral-300 text-sm mb-1">
-          Description
-        </Text>
-        <TextInput
-          className="min-h-[96px] px-4 py-3 rounded-xl bg-neutral-50 dark:bg-neutral-700/60 border border-neutral-200 dark:border-neutral-600 text-neutral-900 dark:text-white mb-4"
-          placeholder="État, accessoires, dimensions…"
-          placeholderTextColor="#9ca3af"
-          value={description}
-          onChangeText={setDescription}
-          multiline
-        />
-
-        <View className="flex-row gap-3">
-          <View className="flex-1">
-            <Text className="text-neutral-700 dark:text-neutral-300 text-sm mb-1">
-              Ville
-            </Text>
-            <TextInput
-              className="h-12 px-4 rounded-xl bg-neutral-50 dark:bg-neutral-700/60 border border-neutral-200 dark:border-neutral-600 text-neutral-900 dark:text-white"
-              placeholder="Montréal"
-              placeholderTextColor="#9ca3af"
-              value={city}
-              onChangeText={setCity}
-              returnKeyType="next"
-            />
-          </View>
-
-          <View className="w-36">
-            <Text className="text-neutral-700 dark:text-neutral-300 text-sm mb-1">
-              Prix
-            </Text>
-            <TextInput
-              className="h-12 px-4 rounded-xl bg-neutral-50 dark:bg-neutral-700/60 border border-neutral-200 dark:border-neutral-600 text-neutral-900 dark:text-white"
-              placeholder="13,22"
-              placeholderTextColor="#9ca3af"
-              value={price}
-              onChangeText={onChangePrice}
-              keyboardType={
-                Platform.OS === "ios"
-                  ? "numbers-and-punctuation"
-                  : "decimal-pad"
-              }
-              returnKeyType="done"
-            />
-          </View>
+      <ScrollView contentContainerStyle={{ paddingTop: 100, paddingBottom: 40, paddingHorizontal: 24 }} showsVerticalScrollIndicator={false}>
+        <View className="mb-10">
+          <Text className="text-3xl font-extrabold tracking-tight mb-2 text-neutral-900 dark:text-white">Nouvelle annonce</Text>
+          <Text className="text-neutral-500 text-lg">Partagez votre création avec la communauté.</Text>
         </View>
 
-        <Pressable
-          onPress={handleSavePost}
-          disabled={!isValid}
-          className={`mt-5 h-12 rounded-xl items-center justify-center ${
-            isValid ? "bg-blue-600 active:bg-blue-700" : "bg-blue-400/60"
-          }`}
-        >
-          <Text className="text-white font-semibold">
-            Publier la publication
-          </Text>
-        </Pressable>
-      </View>
-    </View>
+        <View className="mb-10">
+          <Pressable className="w-full aspect-[4/3] rounded-[2rem] border-2 border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 items-center justify-center overflow-hidden relative">
+            <View className="items-center gap-4 z-10">
+              <View className="w-16 h-16 rounded-full bg-blue-600/10 items-center justify-center">
+                <Ionicons name="camera" size={32} color="#2563EB" />
+              </View>
+              <View className="items-center">
+                <Text className="font-bold text-neutral-900 dark:text-white">Ajouter des photos</Text>
+                <Text className="text-sm text-neutral-500">Appuyez ici pour choisir</Text>
+              </View>
+            </View>
+          </Pressable>
+        </View>
+
+        <View className="space-y-8">
+          <View className="space-y-2 mb-6">
+            <Text className="text-xs font-bold uppercase tracking-widest text-neutral-500 px-1 mb-2">Titre</Text>
+            <TextInput 
+              className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-2xl py-4 px-6 text-neutral-900 dark:text-white" 
+              placeholder="Ex: Vase en céramique tourné main" 
+              placeholderTextColor="#737373"
+              value={title}
+              onChangeText={setTitle}
+            />
+          </View>
+
+          <View className="space-y-2 mb-6">
+            <Text className="text-xs font-bold uppercase tracking-widest text-neutral-500 px-1 mb-2">Description</Text>
+            <TextInput 
+              className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-[2rem] py-4 px-6 text-neutral-900 dark:text-white" 
+              placeholder="Décrivez l'histoire de votre objet, les matériaux utilisés..." 
+              placeholderTextColor="#737373"
+              multiline
+              numberOfLines={5}
+              textAlignVertical="top"
+              value={description}
+              onChangeText={setDescription}
+            />
+          </View>
+
+          <View className="flex-row gap-4 mb-6">
+            <View className="flex-1 space-y-2">
+              <Text className="text-xs font-bold uppercase tracking-widest text-neutral-500 px-1 mb-2">Prix</Text>
+              <View className="relative justify-center">
+                <TextInput 
+                  className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-2xl py-4 pl-6 pr-10 text-neutral-900 dark:text-white" 
+                  placeholder="0.00" 
+                  placeholderTextColor="#737373"
+                  keyboardType="numeric"
+                  value={price}
+                  onChangeText={setPrice}
+                />
+                <Text className="absolute right-4 font-bold text-neutral-900 dark:text-white">$</Text>
+              </View>
+            </View>
+            <View className="flex-1 space-y-2">
+              <Text className="text-xs font-bold uppercase tracking-widest text-neutral-500 px-1 mb-2">Catégorie</Text>
+              <TextInput 
+                className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-2xl py-4 px-6 text-neutral-900 dark:text-white" 
+                placeholder="Ex: Céramique" 
+                placeholderTextColor="#737373"
+                value={category}
+                onChangeText={setCategory}
+              />
+            </View>
+          </View>
+
+          <View className="space-y-2 mb-8">
+            <Text className="text-xs font-bold uppercase tracking-widest text-neutral-500 px-1 mb-2">Localisation</Text>
+            <View className="relative justify-center">
+              <View className="absolute left-4 z-10">
+                <Ionicons name="location" size={20} color="#2563EB" />
+              </View>
+              <TextInput 
+                className="w-full bg-neutral-100 dark:bg-neutral-800 rounded-2xl py-4 pl-12 pr-6 text-neutral-900 dark:text-white" 
+                placeholder="Ex: Montréal, Plateau-Mont-Royal" 
+                placeholderTextColor="#737373"
+                value={location}
+                onChangeText={setLocation}
+              />
+            </View>
+          </View>
+
+          <View className="pt-2">
+            <Pressable 
+              className="w-full py-5 rounded-full bg-blue-600 shadow-lg items-center justify-center active:scale-95" 
+              onPress={handlePublish}
+            >
+              <Text className="text-white font-bold tracking-widest text-sm uppercase">
+                Publier l'annonce
+              </Text>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

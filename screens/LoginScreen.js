@@ -1,98 +1,110 @@
 import React, { useState } from "react";
-import { View, TextInput, Pressable, Text, ActivityIndicator, } from "react-native";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import { View, Text, TextInput, Pressable, KeyboardAvoidingView, Platform, Alert, ScrollView } from "react-native";
+import { Ionicons } from "@expo/vector-icons";
 import { auth } from "../firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
 
 export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(false);
-  const mapAuthError = (err) => {
-    switch (err?.code) {
-      case "auth/invalid-credential":
-        return "Email ou mot de passe invalide.";
-      case "auth/too-many-requests":
-        return "Trop de tentatives. Réessaie plus tard.";
-      case "auth/network-request-failed":
-        return "Connexion réseau instable. Veuillez réessayer.";
-      default:
-        return "Erreur de connexion.";
-    }
-  };
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleLogin = async () => {
-    setError("");
-    setLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, email.trim(), password);
-      navigation.reset({ index: 0, routes: [{ name: "Home" }] });
-    } catch (err) {
-      setError(mapAuthError(err));
-      console.log("Login error:", err);
-    } finally {
-      setLoading(false);
+    if (!email || !password) {
+      Alert.alert("Erreur", "Veuillez remplir tous les champs.");
+      return;
     }
-  };
-
-  const handleCreateAccountButton = () => {
-    navigation.navigate("Signup");
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+      navigation.reset({ index: 0, routes: [{ name: "Main" }] });
+    } catch (error) {
+      Alert.alert("Erreur de connexion", error.message);
+    }
   };
 
   return (
-    <View className="flex-1 justify-center px-5 bg-white dark:bg-neutral-900">
-      <Text className="text-3xl font-bold text-center mb-6 text-neutral-900 dark:text-white">
-        Login
-      </Text>
-
-      {!!error && (
-        <Text className="text-red-600 text-center mb-3">{error}</Text>
-      )}
-
-      <TextInput
-        className="border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 mb-3 text-base text-neutral-900 dark:text-white bg-white dark:bg-neutral-800"
-        placeholder="Email"
-        placeholderTextColor="#9ca3af"
-        value={email}
-        onChangeText={setEmail}
-        autoCapitalize="none"
-        autoCorrect={false}
-        keyboardType="email-address"
-        returnKeyType="next"
-      />
-
-      <TextInput
-        className="border border-neutral-300 dark:border-neutral-700 rounded-xl px-4 py-3 mb-4 text-base text-neutral-900 dark:text-white bg-white dark:bg-neutral-800"
-        placeholder="Password"
-        placeholderTextColor="#9ca3af"
-        secureTextEntry
-        value={password}
-        onChangeText={setPassword}
-        returnKeyType="done"
-      />
-
-      <Pressable
-        onPress={handleLogin}
-        disabled={loading}
-        className={`rounded-2xl px-4 py-3 items-center ${
-          loading ? "opacity-60 bg-blue-600" : "bg-blue-600 active:bg-blue-700"
-        }`}
+    <KeyboardAvoidingView 
+      behavior={Platform.OS === "ios" ? "padding" : "height"} 
+      className="flex-1 bg-neutral-50 dark:bg-neutral-900"
+    >
+      <ScrollView 
+        contentContainerStyle={{ flexGrow: 1 }} 
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text className="text-white font-semibold text-base">Sign in</Text>
-        )}
-      </Pressable>
+        <View className="flex-1 flex-col px-8 pt-24 pb-12">
+          <View className="mb-12">
+            <Text className="text-4xl font-extrabold tracking-tight leading-tight mb-3 text-neutral-900 dark:text-white">
+              Bon retour.
+            </Text>
+            <Text className="text-neutral-500 text-lg leading-relaxed">
+              Connectez-vous pour continuer sur ClicVente.
+            </Text>
+          </View>
 
-      <Pressable
-        onPress={handleCreateAccountButton}
-        className="mt-3 rounded-2xl px-4 py-3 items-center border border-blue-600"
-      >
-        <Text className="text-blue-600 font-semibold text-base">
-          Create an account
-        </Text>
-      </Pressable>
-    </View>
+          <View className="space-y-6 flex-1">
+            <View className="space-y-2 mb-4">
+              <Text className="text-sm font-semibold tracking-wide uppercase ml-1 text-neutral-900 dark:text-white mb-2">
+                E-mail
+              </Text>
+              <TextInput 
+                className="w-full h-14 px-6 rounded-2xl bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white"
+                placeholder="nom@exemple.com"
+                placeholderTextColor="#a3a3a3"
+                value={email}
+                onChangeText={setEmail}
+                keyboardType="email-address"
+                autoCapitalize="none"
+              />
+            </View>
+
+            <View className="space-y-2 mb-8">
+              <View className="flex-row justify-between items-end mb-2 ml-1">
+                <Text className="text-sm font-semibold tracking-wide uppercase text-neutral-900 dark:text-white">
+                  Mot de passe
+                </Text>
+                <Pressable>
+                  <Text className="text-xs font-semibold text-emerald-500">Oublié ?</Text>
+                </Pressable>
+              </View>
+              <View className="relative justify-center">
+                <TextInput 
+                  className="w-full h-14 pl-6 pr-14 rounded-2xl bg-neutral-200 dark:bg-neutral-800 text-neutral-900 dark:text-white"
+                  placeholder="••••••••"
+                  placeholderTextColor="#a3a3a3"
+                  value={password}
+                  onChangeText={setPassword}
+                  secureTextEntry={!showPassword}
+                />
+                <Pressable 
+                  className="absolute right-4 p-2"
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Ionicons name={showPassword ? "eye-off" : "eye"} size={20} color="#737373" />
+                </Pressable>
+              </View>
+            </View>
+
+            <View className="pt-4">
+              <Pressable 
+                className="w-full h-16 rounded-full bg-emerald-500 items-center justify-center shadow-lg active:scale-95"
+                onPress={handleLogin}
+              >
+                <Text className="text-white font-black tracking-widest uppercase text-sm">
+                  Se connecter
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+
+          <View className="mt-12 items-center pb-8">
+            <Text className="text-neutral-500 font-medium">Vous n'avez pas de compte ?</Text>
+            <Pressable onPress={() => navigation.navigate("Signup")} className="mt-2 p-2">
+              <Text className="text-emerald-500 font-bold">Inscrivez-vous ici</Text>
+            </Pressable>
+          </View>
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
