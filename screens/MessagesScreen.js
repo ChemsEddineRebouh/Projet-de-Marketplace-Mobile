@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, FlatList, Pressable, Image, ScrollView } from "react-native";
+import { View, Text, FlatList, Pressable, ScrollView } from "react-native";
 import { auth, db } from "../firebase";
 import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
@@ -7,24 +7,43 @@ import { Ionicons } from "@expo/vector-icons";
 export default function MessagesScreen({ navigation }) {
   const [chats, setChats] = useState([]);
   const [filter, setFilter] = useState("all");
+  const [sortOrder, setSortOrder] = useState("desc"); // 'desc' for descending, 'asc' for ascending
 
   useEffect(() => {
     const uid = auth.currentUser?.uid;
     if (!uid) return;
 
-    const q = query(
-      collection(db, "chats"),
-      where("participants", "array-contains", uid),
-      orderBy("updatedAt", "desc")
-    );
+    let q;
+    const baseCollection = collection(db, "chats");
+
+    // Remove orderBy from the query
+    if (filter === "ventes") {
+      q = query(baseCollection, where("sellerId", "==", uid));
+    } else if (filter === "achats") {
+      q = query(baseCollection, where("buyerId", "==", uid));
+    } else {
+      q = query(baseCollection, where("participants", "array-contains", uid));
+    }
 
     const unsub = onSnapshot(q, (snap) => {
-      const list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      let list = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+      
+      // Sort manually on the client side
+      list.sort((a, b) => {
+        const timeA = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : 0;
+        const timeB = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : 0;
+        if (sortOrder === 'desc') {
+          return timeB - timeA; // Descending
+        } else {
+          return timeA - timeB; // Ascending
+        }
+      });
+
       setChats(list);
     });
 
     return () => unsub();
-  }, []);
+  }, [filter, sortOrder]);
 
   const formatTime = (timestamp) => {
     if (!timestamp) return "";
@@ -42,9 +61,18 @@ export default function MessagesScreen({ navigation }) {
     }
   };
 
+  const toggleSortOrder = () => {
+    setSortOrder(currentOrder => (currentOrder === "desc" ? "asc" : "desc"));
+  };
+
   const ListHeader = () => (
     <View className="mb-4">
-      <Text className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white mb-4">Messages</Text>
+      <View className="flex-row justify-between items-center">
+        <Text className="text-3xl font-bold tracking-tight text-neutral-900 dark:text-white mb-4">Messages</Text>
+        <Pressable onPress={toggleSortOrder} className="p-2">
+          <Ionicons name={sortOrder === 'desc' ? 'arrow-down' : 'arrow-up'} size={24} color="#737373" />
+        </Pressable>
+      </View>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ paddingRight: 16 }}>
         <Pressable 
           onPress={() => setFilter("all")}
@@ -70,7 +98,7 @@ export default function MessagesScreen({ navigation }) {
 
   const renderItem = ({ item, index }) => (
     <Pressable
-      onPress={() => navigation.navigate("Chat", { chatId: item.id })}
+      onPress={() => navigation.navigate("Chat", { chatId: item.id, postTitle: item.postTitle, sellerName: item.sellerName })}
       className="flex-row items-center p-4 rounded-2xl bg-white dark:bg-neutral-800/50 mb-2 active:bg-neutral-100 dark:active:bg-neutral-800"
     >
       <View className="relative mr-4">

@@ -6,7 +6,7 @@ import { collection, addDoc, serverTimestamp, query, orderBy, onSnapshot, doc, u
 import { Ionicons } from "@expo/vector-icons";
 
 export default function ChatScreen({ route, navigation }) {
-  const { chatId, initialText } = route.params || {};
+  const { chatId, initialText, postTitle, sellerName } = route.params || {};
   const [text, setText] = useState(initialText || "");
   const [messages, setMessages] = useState([]);
   const insets = useSafeAreaInsets();
@@ -40,7 +40,7 @@ export default function ChatScreen({ route, navigation }) {
     await addDoc(collection(db, "chats", chatId, "messages"), {
       text: t,
       senderId: me?.uid ?? "",
-      senderName: me?.email ?? "User",
+      senderName: me?.displayName ?? me?.email ?? "User",
       createdAt: serverTimestamp(),
     });
 
@@ -114,11 +114,9 @@ export default function ChatScreen({ route, navigation }) {
         <Pressable onPress={() => navigation.goBack()} className="p-2 -ml-2">
           <Ionicons name="chevron-back" size={28} color="#171717" className="dark:text-white" />
         </Pressable>
-        <View className="flex-row items-center gap-3">
-          <View className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-900/30 items-center justify-center">
-            <Ionicons name="person" size={16} color="#10b981" />
-          </View>
-          <Text className="text-xl font-black tracking-tighter text-neutral-900 dark:text-white">Conversation</Text>
+        <View className="flex-1 items-center">
+          <Text className="text-lg font-bold tracking-tight text-neutral-900 dark:text-white" numberOfLines={1}>{postTitle || "Conversation"}</Text>
+          <Text className="text-xs text-neutral-500" numberOfLines={1}>avec {sellerName || "Vendeur"}</Text>
         </View>
         <View className="w-8" />
       </View>

@@ -12,6 +12,8 @@ import PostScreen from "../screens/PostScreen";
 import MessagesScreen from "../screens/MessagesScreen";
 import ChatScreen from "../screens/ChatScreen";
 import ProfileScreen from "../screens/ProfileScreen";
+import MyPostsScreen from "../screens/MyPostsScreen";
+import EditPostScreen from "../screens/EditPostScreen";
 import BottomNav from "../screens/components/BottomNav";
 
 const Stack = createNativeStackNavigator();
@@ -42,6 +44,8 @@ export default function App() {
           <Stack.Screen name="PostScreen" component={PostScreen} />
           <Stack.Screen name="Chat" component={ChatScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
+          <Stack.Screen name="MyPosts" component={MyPostsScreen} />
+          <Stack.Screen name="EditPost" component={EditPostScreen} />
         </Stack.Navigator>
       </NavigationContainer>
     </SafeAreaProvider>

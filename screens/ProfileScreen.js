@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, Pressable, Image, ScrollView, Alert } from "react-native";
+import { View, Text, Pressable, ScrollView, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { auth, db } from "../firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -47,7 +47,10 @@ export default function ProfileScreen({ navigation }) {
         </View>
 
         <View className="space-y-4 mb-8">
-          <Pressable className="bg-white dark:bg-neutral-800 p-4 rounded-2xl flex-row items-center justify-between shadow-sm active:scale-95 mb-4">
+          <Pressable 
+            className="bg-white dark:bg-neutral-800 p-4 rounded-2xl flex-row items-center justify-between shadow-sm active:scale-95 mb-4"
+            onPress={() => navigation.navigate("MyPosts")}
+          >
             <View className="flex-row items-center gap-3">
               <View className="w-10 h-10 rounded-full bg-emerald-100 dark:bg-emerald-900/30 items-center justify-center">
                 <Ionicons name="cube" size={20} color="#10b981" />

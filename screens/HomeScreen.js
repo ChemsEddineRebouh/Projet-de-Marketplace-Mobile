@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useMemo } from "react";
-import { View, Text, FlatList, Pressable, TextInput, useWindowDimensions } from "react-native";
+import { View, Text, FlatList, Pressable, TextInput, Image } from "react-native";
 import { auth, db } from "../firebase";
 import { collection, query, orderBy, onSnapshot, getDocs, where, documentId, doc, getDoc } from "firebase/firestore";
 import { Ionicons } from "@expo/vector-icons";
@@ -38,14 +38,17 @@ const renderItem = ({ item, usernamesById, navigation }) => (
     onPress={() => navigation.navigate("PostScreen", { postId: item.id })}
   >
     <View className="aspect-[3/4] w-full relative items-center justify-center bg-neutral-200 dark:bg-neutral-800">
-      <Ionicons name="image" size={40} color="#737373" />
+      {item.imageUrl ? (
+        <Image source={{ uri: item.imageUrl }} className="w-full h-full" />
+      ) : (
+        <Ionicons name="image" size={40} color="#737373" />
+      )}
       <View className="absolute top-3 right-3 bg-white/90 px-3 py-1 rounded-full shadow-sm">
         <Text className="text-xs font-bold text-blue-600">{item.price} $</Text>
       </View>
     </View>
     <View className="p-4">
       <Text className="font-bold text-sm text-neutral-900 dark:text-white" numberOfLines={1}>{item.title}</Text>
-      <Text className="text-[11px] text-neutral-500 mt-1">{item.city || "Laval"}</Text>
       <Text className="text-[10px] text-blue-500 mt-1">@{usernamesById[item.creator_id] || "..."}</Text>
     </View>
   </Pressable>
@@ -94,8 +97,7 @@ export default function HomeScreen({ navigation }) {
   };
 
   const filteredPosts = useMemo(() => posts.filter((p) => 
-    p.title?.toLowerCase().includes(search.toLowerCase()) || 
-    p.city?.toLowerCase().includes(search.toLowerCase())
+    p.title?.toLowerCase().includes(search.toLowerCase())
   ), [posts, search]);
 
   return (

@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from "react";
-import { View, Text, ScrollView, Pressable, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform } from "react-native";
+import { View, Text, ScrollView, Pressable, ActivityIndicator, TextInput, KeyboardAvoidingView, Platform, Alert, Image } from "react-native";
 import { useRoute, useNavigation } from "@react-navigation/native";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { doc, getDoc, deleteDoc } from "firebase/firestore";
+import { db, auth } from "../firebase";
 import { Ionicons } from "@expo/vector-icons";
 import { getOrCreateChat } from "../lib/chat";
 
@@ -15,6 +15,9 @@ export default function PostScreen() {
   const [seller, setSeller] = useState(null);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
+
+  const currentUserId = auth.currentUser?.uid;
+  const isMyPost = post?.creator_id === currentUserId;
 
   useEffect(() => {
     const fetchPostAndSeller = async () => {
@@ -31,7 +34,9 @@ export default function PostScreen() {
             }
           }
         }
-      } catch (error) {} finally {
+      } catch (error) {
+        console.error("Error fetching post or seller:", error);
+      } finally {
         setLoading(false);
       }
     };
@@ -46,13 +51,49 @@ export default function PostScreen() {
           postId: postId,
           postTitle: post.title,
           sellerId: post.creator_id,
+          sellerName: seller?.username || "Vendeur",
         });
         navigation.navigate("Chat", { 
           chatId: chatId, 
-          initialText: message 
+          initialText: message,
+          postTitle: post.title,
+          sellerName: seller?.username || "Vendeur",
         });
-      } catch (error) {}
+      } catch (error) {
+        Alert.alert("Erreur", "Impossible d'envoyer le message.");
+      }
     }
+  };
+
+  const handleDeletePost = () => {
+    Alert.alert(
+      "Supprimer l'annonce",
+      "Êtes-vous sûr de vouloir supprimer cette annonce ?",
+      [
+        {
+          text: "Annuler",
+          style: "cancel",
+        },
+        {
+          text: "Supprimer",
+          onPress: async () => {
+            try {
+              await deleteDoc(doc(db, "posts", postId));
+              Alert.alert("Succès", "L'annonce a été supprimée.");
+              navigation.goBack();
+            } catch (error) {
+              Alert.alert("Erreur", "Impossible de supprimer l'annonce.");
+            }
+          },
+          style: "destructive",
+        },
+      ],
+      { cancelable: true }
+    );
+  };
+
+  const handleEditPost = () => {
+    navigation.navigate("EditPost", { postId: postId });
   };
 
   if (loading) {
@@ -86,8 +127,14 @@ export default function PostScreen() {
 
       <ScrollView contentContainerStyle={{ paddingBottom: 120 }} showsVerticalScrollIndicator={false}>
         <View className="w-full aspect-square bg-neutral-200 dark:bg-neutral-800 mt-24 items-center justify-center">
-          <Ionicons name="image-outline" size={64} color="#A3A3A3" />
-          <Text className="text-neutral-400 mt-2 font-bold tracking-widest">ESPACE IMAGE ARTICLE</Text>
+          {post.imageUrl ? (
+            <Image source={{ uri: post.imageUrl }} className="w-full h-full" />
+          ) : (
+            <>
+              <Ionicons name="image-outline" size={64} color="#A3A3A3" />
+              <Text className="text-neutral-400 mt-2 font-bold tracking-widest">ESPACE IMAGE ARTICLE</Text>
+            </>
+          )}
         </View>
 
         <View className="px-6 py-8">
@@ -151,22 +198,39 @@ export default function PostScreen() {
         </View>
       </ScrollView>
 
-      <View className="absolute bottom-0 left-0 w-full p-4 bg-white/90 dark:bg-neutral-900/90 border-t border-neutral-200 dark:border-neutral-800 flex-row gap-3 items-center">
-        <TextInput
-          className="flex-1 h-12 px-4 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white"
-          placeholder="Envoyer un message au vendeur..."
-          placeholderTextColor="#737373"
-          value={message}
-          onChangeText={setMessage}
-        />
-        <Pressable 
-          className={`w-12 h-12 rounded-full flex items-center justify-center ${message.trim().length ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`}
-          onPress={handleSendInitialMessage}
-          disabled={!message.trim().length}
-        >
-          <Ionicons name="send" size={20} color="white" />
-        </Pressable>
-      </View>
+      {isMyPost ? (
+        <View className="absolute bottom-0 left-0 w-full p-4 bg-white/90 dark:bg-neutral-900/90 border-t border-neutral-200 dark:border-neutral-800 flex-row gap-3 items-center">
+          <Pressable 
+            className="flex-1 h-12 rounded-full bg-blue-600 items-center justify-center shadow-sm active:scale-95"
+            onPress={handleEditPost}
+          >
+            <Text className="text-white font-bold text-sm uppercase">Modifier</Text>
+          </Pressable>
+          <Pressable 
+            className="flex-1 h-12 rounded-full bg-red-500 items-center justify-center shadow-sm active:scale-95"
+            onPress={handleDeletePost}
+          >
+            <Text className="text-white font-bold text-sm uppercase">Supprimer</Text>
+          </Pressable>
+        </View>
+      ) : (
+        <View className="absolute bottom-0 left-0 w-full p-4 bg-white/90 dark:bg-neutral-900/90 border-t border-neutral-200 dark:border-neutral-800 flex-row gap-3 items-center">
+          <TextInput
+            className="flex-1 h-12 px-4 rounded-full bg-neutral-100 dark:bg-neutral-800 text-neutral-900 dark:text-white"
+            placeholder="Envoyer un message au vendeur..."
+            placeholderTextColor="#737373"
+            value={message}
+            onChangeText={setMessage}
+          />
+          <Pressable 
+            className={`w-12 h-12 rounded-full flex items-center justify-center shadow-sm ${message.trim().length ? 'bg-blue-600' : 'bg-neutral-300 dark:bg-neutral-700'}`}
+            onPress={handleSendInitialMessage}
+            disabled={!message.trim().length}
+          >
+            <Ionicons name="send" size={20} color="white" />
+          </Pressable>
+        </View>
+      )}
     </KeyboardAvoidingView>
   );
 }

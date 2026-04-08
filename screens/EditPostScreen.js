@@ -1,85 +1,74 @@
-import React, { useState } from "react";
-import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, Alert, Image, ActivityIndicator } from "react-native";
+import React, { useState, useEffect } from "react";
+import { View, Text, TextInput, Pressable, ScrollView, KeyboardAvoidingView, Platform, Alert } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { auth, db, storage } from "../firebase";
-import * as ImagePicker from 'expo-image-picker';
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { doc, getDoc, updateDoc, serverTimestamp } from "firebase/firestore";
+import { db } from "../firebase";
 
-export default function CreatePostScreen({ navigation }) {
+export default function EditPostScreen({ navigation, route }) {
+  const { postId } = route.params;
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [price, setPrice] = useState("");
   const [category, setCategory] = useState("");
   const [location, setLocation] = useState("");
-  const [imageUri, setImageUri] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const pickImage = async () => {
-    let result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-      allowsEditing: true,
-      aspect: [4, 3],
-      quality: 1,
-    });
+  useEffect(() => {
+    const fetchPost = async () => {
+      try {
+        const postRef = doc(db, "posts", postId);
+        const postSnap = await getDoc(postRef);
+        if (postSnap.exists()) {
+          const data = postSnap.data();
+          setTitle(data.title || "");
+          setDescription(data.description || "");
+          setPrice(data.price ? String(data.price) : "");
+          setCategory(data.category || "");
+          setLocation(data.city || "");
+        } else {
+          Alert.alert("Erreur", "Annonce introuvable.");
+          navigation.goBack();
+        }
+      } catch (error) {
+        Alert.alert("Erreur", "Impossible de charger l'annonce.");
+        navigation.goBack();
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPost();
+  }, [postId]);
 
-    if (!result.canceled) {
-      setImageUri(result.assets[0].uri);
-    }
-  };
-
-  const uploadImage = async (uri) => {
-    if (!uri) return null;
-    const response = await fetch(uri);
-    const blob = await response.blob();
-    const filename = uri.substring(uri.lastIndexOf('/') + 1);
-    const storageRef = ref(storage, `posts/${filename}`);
-    
-    setUploading(true);
-    await uploadBytes(storageRef, blob);
-    const downloadURL = await getDownloadURL(storageRef);
-    setUploading(false);
-    
-    return downloadURL;
-  };
-
-  const handlePublish = async () => {
-    if (!title || !price || !location || !imageUri) {
-      Alert.alert("Erreur", "Veuillez remplir tous les champs et ajouter une image.");
+  const handleUpdate = async () => {
+    if (!title || !price || !location) {
+      Alert.alert("Erreur", "Veuillez remplir les champs obligatoires (Titre, Prix, Localisation).");
       return;
     }
 
     try {
-      const imageUrl = await uploadImage(imageUri);
-      if (!imageUrl) {
-        Alert.alert("Erreur", "Le téléversement de l'image a échoué.");
-        return;
-      }
-
-      await addDoc(collection(db, "posts"), {
+      const postRef = doc(db, "posts", postId);
+      await updateDoc(postRef, {
         title,
         description,
         price: parseFloat(price),
         category: category || "Général",
         city: location,
-        imageUrl,
-        creator_id: auth.currentUser?.uid,
-        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
       });
-      
-      // Reset form fields
-      setTitle("");
-      setDescription("");
-      setPrice("");
-      setCategory("");
-      setLocation("");
-      setImageUri(null);
-
+      Alert.alert("Succès", "L'annonce a été mise à jour.");
       navigation.goBack();
     } catch (error) {
-      Alert.alert("Erreur", error.message);
+      Alert.alert("Erreur", "Impossible de mettre à jour l'annonce.");
     }
   };
+
+  if (loading) {
+    return (
+      <View className="flex-1 justify-center items-center bg-neutral-50 dark:bg-neutral-900">
+        <Text className="text-neutral-500">Chargement...</Text>
+      </View>
+    );
+  }
 
   return (
     <KeyboardAvoidingView 
@@ -88,38 +77,31 @@ export default function CreatePostScreen({ navigation }) {
     >
       <View className="absolute top-0 w-full z-50 bg-white/90 dark:bg-neutral-900/90 pt-12 pb-4 px-6 flex-row justify-between items-center border-b border-neutral-200 dark:border-neutral-800">
         <Pressable onPress={() => navigation.goBack()} className="p-2 -ml-2">
-          <Ionicons name="close" size={28} color="#171717" />
+          <Ionicons name="close" size={28} color="#171717" className="dark:text-white" />
         </Pressable>
-        <Text className="text-xl font-black tracking-tighter text-neutral-900 dark:text-white">ClicVente</Text>
+        <Text className="text-xl font-black tracking-tighter text-neutral-900 dark:text-white">Modifier l'annonce</Text>
         <View className="w-10 h-10 rounded-full overflow-hidden bg-neutral-200 dark:bg-neutral-800 items-center justify-center">
           <Ionicons name="person" size={20} color="#737373" />
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={{ paddingTop: 100, paddingBottom: 120, paddingHorizontal: 24 }} showsVerticalScrollIndicator={false}>
+      <ScrollView contentContainerStyle={{ paddingTop: 100, paddingBottom: 40, paddingHorizontal: 24 }} showsVerticalScrollIndicator={false}>
         <View className="mb-10">
-          <Text className="text-3xl font-extrabold tracking-tight mb-2 text-neutral-900 dark:text-white">Nouvelle annonce</Text>
-          <Text className="text-neutral-500 text-lg">Partagez votre création avec la communauté.</Text>
+          <Text className="text-3xl font-extrabold tracking-tight mb-2 text-neutral-900 dark:text-white">Modifier votre annonce</Text>
+          <Text className="text-neutral-500 text-lg">Mettez à jour les détails de votre article.</Text>
         </View>
 
         <View className="mb-10">
-          <Pressable 
-            onPress={pickImage}
-            className="w-full aspect-[4/3] rounded-[2rem] border-2 border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 items-center justify-center overflow-hidden relative"
-          >
-            {imageUri ? (
-              <Image source={{ uri: imageUri }} className="w-full h-full" />
-            ) : (
-              <View className="items-center gap-4 z-10">
-                <View className="w-16 h-16 rounded-full bg-blue-600/10 items-center justify-center">
-                  <Ionicons name="camera" size={32} color="#2563EB" />
-                </View>
-                <View className="items-center">
-                  <Text className="font-bold text-neutral-900 dark:text-white">Ajouter une photo</Text>
-                  <Text className="text-sm text-neutral-500">Appuyez ici pour choisir</Text>
-                </View>
+          <Pressable className="w-full aspect-[4/3] rounded-[2rem] border-2 border-dashed border-neutral-300 dark:border-neutral-700 bg-neutral-100 dark:bg-neutral-800 items-center justify-center overflow-hidden relative">
+            <View className="items-center gap-4 z-10">
+              <View className="w-16 h-16 rounded-full bg-blue-600/10 items-center justify-center">
+                <Ionicons name="camera" size={32} color="#2563EB" />
               </View>
-            )}
+              <View className="items-center">
+                <Text className="font-bold text-neutral-900 dark:text-white">Ajouter des photos</Text>
+                <Text className="text-sm text-neutral-500">Appuyez ici pour choisir</Text>
+              </View>
+            </View>
           </Pressable>
         </View>
 
@@ -195,16 +177,11 @@ export default function CreatePostScreen({ navigation }) {
           <View className="pt-2">
             <Pressable 
               className="w-full py-5 rounded-full bg-blue-600 shadow-lg items-center justify-center active:scale-95" 
-              onPress={handlePublish}
-              disabled={uploading}
+              onPress={handleUpdate}
             >
-              {uploading ? (
-                <ActivityIndicator color="white" />
-              ) : (
-                <Text className="text-white font-bold tracking-widest text-sm uppercase">
-                  Publier l'annonce
-                </Text>
-              )}
+              <Text className="text-white font-bold tracking-widest text-sm uppercase">
+                Modifier l'annonce
+              </Text>
             </Pressable>
           </View>
         </View>
